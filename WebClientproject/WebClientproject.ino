@@ -16,6 +16,8 @@
 
 #include <SPI.h>
 #include <Ethernet.h>
+#include <stdlib.h>
+
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
@@ -39,15 +41,10 @@ EthernetClient client;
 unsigned long beginMicros, endMicros;
 unsigned long byteCount = 0;
 bool printWebData = true;  // set to false for better speed measurement
-
+char temp[7];
+int tempTemp;
+int uid;
 void setup() {
-  // You can use Ethernet.init(pin) to configure the CS pin
-  //Ethernet.init(10);  // Most Arduino shields
-  //Ethernet.init(5);   // MKR ETH shield
-  //Ethernet.init(0);   // Teensy 2.0
-  //Ethernet.init(20);  // Teensy++ 2.0
-  //Ethernet.init(15);  // ESP8266 with Adafruit Featherwing Ethernet
-  //Ethernet.init(33);  // ESP32 with Adafruit Featherwing Ethernet
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
@@ -56,32 +53,52 @@ void setup() {
   }
 
   Ethernet.begin(mac, ip, myDns);
+  uid = rand() % 20000;
+  
   // give the Ethernet shield a second to initialize:
   delay(1000);
   Serial.print("connecting to ");
   Serial.print(server);
   Serial.println("...");
-
+  String test1 = "?param1=someDataToPost&hej=1";
   // if you get a connection, report back via serial:
-  if (client.connect(server, 80)) {
-    Serial.print("connected to ");
-    Serial.println(client.remoteIP());
-    // Make a HTTP request:
-    client.println("POST: /h5emb/index.php?param1=someDataToPost&hej=1 HTTP/1.1");
-    client.println("Host: 192.168.1.1");
-    client.println("Connection: close");
-    client.println( "Content-Type: application/x-www-form-urlencoded" );
-  client.println();
-  } else {
-    // if you didn't get a connection to the server:
-    Serial.println("connection failed");
-  }
-  beginMicros = micros();
+  
 }
 
 void loop() {
+  Serial.readBytes(temp,8);
+  tempTemp = rand() % 30;
   // if there are incoming bytes available
   // from the server, read them and print them:
+  String url;
+  url += F("POST: /h5emb/index.php?temp=");
+  url += String((char *)temp);
+  url += F("&uid=");
+  url += String(uid,6);
+  url += F(" HTTP/1.1");
+  
+  
+  Serial.print(url);
+  if (client.connect(server, 80)) {
+      Serial.print("connected to ");
+      Serial.println(client.remoteIP());
+      // Make a HTTP request:
+      
+      //if(){
+        client.println(url);
+        client.println("Host: 192.168.1.1");
+        client.println("Connection: close");
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.println();
+        delay(1000);
+      //}
+  } else {
+      // if you didn't get a connection to the server:
+      Serial.println("connection failed");
+  }
+
+  beginMicros = micros();
+  
   int len = client.available();
   if (len > 0) {
     byte buffer[80];
